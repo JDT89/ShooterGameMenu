@@ -1,7 +1,11 @@
 --!strict
 
-local Theme = require(script.Parent.Parent:WaitForChild("Theme"))
-local UiUtil = require(script.Parent.Parent.Util:WaitForChild("UiUtil"))
+local menuRoot = script.Parent.Parent
+local Theme = require(menuRoot:WaitForChild("Theme"))
+
+local utilRoot = menuRoot:WaitForChild("Util")
+local UiUtil = require(utilRoot:WaitForChild("UiUtil"))
+local TweenUtil = require(utilRoot:WaitForChild("TweenUtil"))
 
 export type NavItem = {
 	id: string,
@@ -13,16 +17,25 @@ export type NavRailApi = {
 	setMode: (self: NavRailApi, mode: "Expanded" | "IconOnly") -> (),
 	setActive: (self: NavRailApi, id: string) -> (),
 	getFrame: (self: NavRailApi) -> Frame,
+	getButton: (self: NavRailApi, id: string) -> TextButton?,
+	getFirstButton: (self: NavRailApi) -> TextButton?,
 }
 
 local NavRail = {}
 
+local ACTIVE_TRANSPARENCY = 0.06
+local HOVER_TRANSPARENCY = 0.18
+local IDLE_TRANSPARENCY = 0.62
+
 function NavRail.create(parent: Instance, items: { NavItem }, onSelect: (id: string) -> ()): NavRailApi
 	local frame = Instance.new("Frame")
 	frame.Name = "NavRail"
-	frame.BackgroundTransparency = 0.15
+	frame.BackgroundTransparency = 0.12
 	frame.BorderSizePixel = 0
+	frame.Size = UDim2.fromScale(1, 1)
 	frame.Parent = parent
+
+	UiUtil.createCorner(Theme.Corner).Parent = frame
 
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 12)
@@ -59,14 +72,19 @@ function NavRail.create(parent: Instance, items: { NavItem }, onSelect: (id: str
 		text.Text = item.label
 	end
 
+	local function isActive(btn: TextButton): boolean
+		return btn:GetAttribute("IsActive") == true
+	end
+
 	local function setActive(id: string)
 		activeId = id
 		for bid, btn in pairs(buttons) do
-			if bid == id then
-				btn.BackgroundTransparency = 0.05
-				btn.TextTransparency = 0
+			local active = bid == id
+			btn:SetAttribute("IsActive", active)
+			if active then
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = ACTIVE_TRANSPARENCY })
 			else
-				btn.BackgroundTransparency = 0.6
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = IDLE_TRANSPARENCY })
 			end
 		end
 	end
@@ -77,14 +95,13 @@ function NavRail.create(parent: Instance, items: { NavItem }, onSelect: (id: str
 		btn.LayoutOrder = i
 		btn.Size = UDim2.new(1, 0, 0, 44)
 		btn.AutoButtonColor = false
-		btn.BackgroundTransparency = 0.6
+		btn.BackgroundTransparency = IDLE_TRANSPARENCY
 		btn.BorderSizePixel = 0
 		btn.Text = ""
 		btn.Parent = frame
 		btn.Selectable = true
 
-		local corner = UiUtil.createCorner(Theme.CornerSmall)
-		corner.Parent = btn
+		UiUtil.createCorner(Theme.CornerSmall).Parent = btn
 
 		local icon = Instance.new("TextLabel")
 		icon.Name = "Icon"
@@ -109,6 +126,30 @@ function NavRail.create(parent: Instance, items: { NavItem }, onSelect: (id: str
 		label.Parent = btn
 
 		applyButtonLayout(btn, item)
+
+		btn.MouseEnter:Connect(function()
+			if not isActive(btn) then
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = HOVER_TRANSPARENCY })
+			end
+		end)
+
+		btn.MouseLeave:Connect(function()
+			if not isActive(btn) then
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = IDLE_TRANSPARENCY })
+			end
+		end)
+
+		btn.MouseButton1Down:Connect(function()
+			if not isActive(btn) then
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = 0.12 })
+			end
+		end)
+
+		btn.MouseButton1Up:Connect(function()
+			if not isActive(btn) then
+				TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = HOVER_TRANSPARENCY })
+			end
+		end)
 
 		btn.MouseButton1Click:Connect(function()
 			onSelect(item.id)
@@ -139,6 +180,18 @@ function NavRail.create(parent: Instance, items: { NavItem }, onSelect: (id: str
 
 	function api:getFrame()
 		return frame
+	end
+
+	function api:getButton(id: string)
+		return buttons[id]
+	end
+
+	function api:getFirstButton()
+		local first = items[1]
+		if not first then
+			return nil
+		end
+		return buttons[first.id]
 	end
 
 	return api
