@@ -63,7 +63,6 @@ local function buildCategories(modes: { any }): { string }
 		return a < b
 	end)
 
-	-- Always include All at the front
 	table.insert(categories, 1, "All")
 	return categories
 end
@@ -150,7 +149,7 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	searchBox.Size = UDim2.fromOffset(300, 36)
 	searchBox.ClearTextOnFocus = false
 	searchBox.Text = ""
-	searchBox.PlaceholderText = "Search modes…"
+	searchBox.PlaceholderText = "Search modes..."
 	searchBox.Font = Theme.Font
 	searchBox.TextSize = 14
 	searchBox.TextColor3 = Theme.Colors.Text
@@ -177,8 +176,8 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	chipsScroller.Size = UDim2.new(1, 0, 0, 38)
 	chipsScroller.ScrollingDirection = Enum.ScrollingDirection.X
 	chipsScroller.CanvasSize = UDim2.fromOffset(0, 0)
-	chipsScroller.ScrollBarThickness = 0
 	chipsScroller.AutomaticCanvasSize = Enum.AutomaticSize.X
+	chipsScroller.ScrollBarThickness = 0
 	chipsScroller.Parent = frame
 
 	local chipsList = Instance.new("UIListLayout")
@@ -212,67 +211,28 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	bodyPad.PaddingRight = UDim.new(0, 12)
 	bodyPad.Parent = body
 
-	local content = Instance.new("Frame")
-	content.Name = "Content"
-	content.BackgroundTransparency = 1
-	content.Size = UDim2.new(1, 0, 0, 0)
-	content.AutomaticSize = Enum.AutomaticSize.Y
-	content.Parent = body
-
 	local vList = Instance.new("UIListLayout")
 	vList.FillDirection = Enum.FillDirection.Vertical
 	vList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	vList.SortOrder = Enum.SortOrder.LayoutOrder
 	vList.Padding = UDim.new(0, 14)
-	vList.Parent = content
+	vList.Parent = body
 
-	local allModes = ModeCatalog.getAll()
-	local categories = buildCategories(allModes)
-	local featuredMode = pickFeaturedMode(allModes)
+	local allModesAtStart = ModeCatalog.getAll()
+	local categories = buildCategories(allModesAtStart)
+	local featuredMode = pickFeaturedMode(allModesAtStart)
 
 	local selectedCategory = "All"
 	local query = ""
 	local activeModeId = ""
-
-	-- Category chips
-	local chipButtons: { [string]: TextButton } = {}
-
-	local function setCategory(newCategory: string)
-		selectedCategory = newCategory
-		for cat, btn in pairs(chipButtons) do
-			btn:Destroy()
-			chipButtons[cat] = nil
-		end
-
-		for _, cat in ipairs(categories) do
-			local isActive = (cat == selectedCategory)
-			local chip = Instance.new("TextButton")
-			chip.Name = "Chip_" .. cat
-			chip.Size = UDim2.fromOffset(math.max(72, (string.len(cat) * 9) + 26), 30)
-			chip.Text = cat
-			chip.Selectable = true
-			chip.Parent = chipsScroller
-			styleChip(chip, isActive)
-
-			if not isActive then
-				setButtonHover(chip, chip.BackgroundTransparency, 0.12)
-			end
-
-			chip.MouseButton1Click:Connect(function()
-				selectedCategory = cat
-				setCategory(cat)
-			end)
-
-			chipButtons[cat] = chip
-		end
-	end
+	local lastFilteredCount = 0
 
 	-- Featured hero
 	local hero = Instance.new("Frame")
 	hero.Name = "FeaturedHero"
 	hero.LayoutOrder = 1
 	hero.Size = UDim2.new(1, 0, 0, 240)
-	hero.Parent = content
+	hero.Parent = body
 	styleSurface(hero, Theme.Alpha.PanelStrong, Theme.Corner)
 
 	local heroBgImage = Instance.new("ImageLabel")
@@ -378,7 +338,27 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	UiUtil.createStroke(Theme.Colors.Stroke, 0.86, 1).Parent = heroCta
 	UiUtil.createGradient2(Theme.Colors.Accent, Theme.Colors.AccentSoft, 90).Parent = heroCta
 
-	-- Section header
+	heroCta.MouseEnter:Connect(function()
+		if heroCta.Active then
+			TweenUtil.tween(heroCta, Theme.Anim.Fast, { BackgroundTransparency = 0.05 })
+		end
+	end)
+	heroCta.MouseLeave:Connect(function()
+		if heroCta.Active then
+			TweenUtil.tween(heroCta, Theme.Anim.Fast, { BackgroundTransparency = 0 })
+		end
+	end)
+	heroCta.MouseButton1Down:Connect(function()
+		if heroCta.Active then
+			TweenUtil.tween(heroCta, Theme.Anim.Fast, { BackgroundTransparency = Theme.Alpha.ButtonDown })
+		end
+	end)
+	heroCta.MouseButton1Up:Connect(function()
+		if heroCta.Active then
+			TweenUtil.tween(heroCta, Theme.Anim.Fast, { BackgroundTransparency = 0.05 })
+		end
+	end)
+
 	local sectionHeader = Instance.new("TextLabel")
 	sectionHeader.Name = "AllModesHeader"
 	sectionHeader.BackgroundTransparency = 1
@@ -389,15 +369,14 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	sectionHeader.Size = UDim2.new(1, 0, 0, 20)
 	sectionHeader.Text = "ALL MODES"
 	sectionHeader.LayoutOrder = 2
-	sectionHeader.Parent = content
+	sectionHeader.Parent = body
 
 	local gridHost = Instance.new("Frame")
 	gridHost.Name = "GridHost"
 	gridHost.BackgroundTransparency = 1
 	gridHost.Size = UDim2.new(1, 0, 0, 0)
-	gridHost.AutomaticSize = Enum.AutomaticSize.Y
 	gridHost.LayoutOrder = 3
-	gridHost.Parent = content
+	gridHost.Parent = body
 
 	local grid = Instance.new("UIGridLayout")
 	grid.CellPadding = UDim2.fromOffset(14, 14)
@@ -411,7 +390,7 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	emptyState.Size = UDim2.new(1, 0, 0, 90)
 	emptyState.LayoutOrder = 4
 	emptyState.Visible = false
-	emptyState.Parent = content
+	emptyState.Parent = body
 
 	local emptyTitle = Instance.new("TextLabel")
 	emptyTitle.BackgroundTransparency = 1
@@ -443,17 +422,33 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	}
 
 	local cards: { [string]: CardParts } = {}
+	local columns = 1
 
-	local function updateGridForWidth(width: number)
-		local columns = 1
-		if width >= 1100 then
-			columns = 3
-		elseif width >= 720 then
-			columns = 2
+	local function updateGridHostHeight()
+		if lastFilteredCount <= 0 then
+			gridHost.Size = UDim2.new(1, 0, 0, 0)
+			return
 		end
 
+		local rows = math.ceil(lastFilteredCount / columns)
+		local cellH = grid.CellSize.Y.Offset
+		local padY = grid.CellPadding.Y.Offset
+		local height = (rows * cellH) + math.max(0, rows - 1) * padY
+		gridHost.Size = UDim2.new(1, 0, 0, height)
+	end
+
+	local function updateGridForWidth(width: number)
+		local newCols = 1
+		if width >= 1100 then
+			newCols = 3
+		elseif width >= 720 then
+			newCols = 2
+		end
+
+		columns = newCols
+
 		local paddingX = 12
-		local spacing = 14
+		local spacing = grid.CellPadding.X.Offset
 		local available = math.max(300, width - paddingX)
 		local cellW = (available - ((columns - 1) * spacing)) / columns
 		cellW = clamp(cellW, 280, 410)
@@ -463,6 +458,8 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		-- Hero sizing (keeps premium proportions)
 		local heroH = clamp(math.floor(width * 0.24), 200, 280)
 		hero.Size = UDim2.new(1, 0, 0, heroH)
+
+		updateGridHostHeight()
 	end
 
 	local function setSelected(modeId: string)
@@ -583,10 +580,12 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		local locked = (mode.comingSoon == true) or (mode.enabled == false)
 		if locked then
 			createPill(card, "COMING SOON", Theme.Colors.Warning, Color3.fromRGB(20, 14, 8))
+		elseif typeof(mode.minLevel) == "number" and mode.minLevel > 1 then
+			createPill(card, ("LV %d+"):format(mode.minLevel), Theme.Colors.Panel3, Theme.Colors.Text)
 		end
 
 		local function setHover(isHover: boolean)
-			if activeModeId == mode.id then
+			if activeModeId == tostring(mode.id) then
 				return
 			end
 			TweenUtil.tween(card, Theme.Anim.Fast, {
@@ -614,8 +613,9 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 			if locked then
 				return
 			end
-			setSelected(tostring(mode.id))
-			onSelectMode(tostring(mode.id))
+			local id = tostring(mode.id)
+			setSelected(id)
+			onSelectMode(id)
 		end)
 
 		return {
@@ -624,7 +624,6 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 			focus = focus,
 		}
 	end
-
 	local function matchesFilter(mode: any): boolean
 		if selectedCategory ~= "All" then
 			if getCategory(mode) ~= selectedCategory then
@@ -673,23 +672,52 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 			end
 		end
 
-		emptyState.Visible = (#filtered == 0)
+		lastFilteredCount = #filtered
+		emptyState.Visible = (lastFilteredCount == 0)
 
 		for _, mode in ipairs(filtered) do
 			local parts = makeCard(mode)
 			cards[tostring(mode.id)] = parts
 		end
 
-		-- Restore selection visuals after rebuild
 		if activeModeId ~= "" then
 			setSelected(activeModeId)
 		end
 
-		-- Update header with count
-		sectionHeader.Text = string.format("ALL MODES (%d)", #filtered)
+		sectionHeader.Text = string.format("ALL MODES (%d)", lastFilteredCount)
+		updateGridHostHeight()
 	end
 
-	-- Featured mode content (always first Core mode per your choice)
+	local function renderChips()
+		for _, child in ipairs(chipsScroller:GetChildren()) do
+			if child:IsA("TextButton") then
+				child:Destroy()
+			end
+		end
+
+		for _, cat in ipairs(categories) do
+			local isActive = (cat == selectedCategory)
+			local chip = Instance.new("TextButton")
+			chip.Name = "Chip_" .. cat
+			chip.Size = UDim2.fromOffset(math.max(72, (string.len(cat) * 9) + 26), 30)
+			chip.Text = cat
+			chip.Selectable = true
+			chip.Parent = chipsScroller
+			styleChip(chip, isActive)
+
+			if not isActive then
+				setButtonHover(chip, chip.BackgroundTransparency, 0.12)
+			end
+
+			chip.MouseButton1Click:Connect(function()
+				selectedCategory = cat
+				renderChips()
+				rebuild()
+			end)
+		end
+	end
+
+	-- Featured mode content (first Core mode)
 	local function applyFeatured()
 		if not featuredMode then
 			heroName.Text = "Featured"
@@ -698,8 +726,8 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 			heroMeta.Text = ""
 			heroCta.Text = "SELECT"
 			heroCta.Active = false
-			heroCta.AutoButtonColor = false
-			heroCta.BackgroundTransparency = 0.6
+			heroCta.BackgroundTransparency = 0.65
+			heroCta.TextTransparency = 0.35
 			heroBgImage.Visible = false
 			return
 		end
@@ -707,13 +735,17 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		heroName.Text = tostring(featuredMode.displayName)
 		heroSubtitle.Text = tostring(featuredMode.subtitle or "")
 		heroDesc.Text = tostring(featuredMode.description or "")
-		heroMeta.Text = string.format("%d-%d players • %s", tonumber(featuredMode.minPlayers) or 2, tonumber(featuredMode.maxPlayers) or 2, getCategory(featuredMode))
-		heroCta.Text = "SELECT"
+		heroMeta.Text = string.format(
+			"%d-%d players • %s",
+			tonumber(featuredMode.minPlayers) or 2,
+			tonumber(featuredMode.maxPlayers) or 2,
+			getCategory(featuredMode)
+		)
 
 		local locked = (featuredMode.comingSoon == true) or (featuredMode.enabled == false)
 		heroCta.Active = not locked
-		heroCta.AutoButtonColor = false
 		heroCta.BackgroundTransparency = locked and 0.65 or 0
+		heroCta.TextTransparency = locked and 0.35 or 0
 
 		local bg = featuredMode.backgroundImage
 		if typeof(bg) == "string" and #bg > 0 then
@@ -731,6 +763,7 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		if (featuredMode.comingSoon == true) or (featuredMode.enabled == false) then
 			return
 		end
+
 		local id = tostring(featuredMode.id)
 		setSelected(id)
 		onSelectMode(id)
@@ -741,8 +774,8 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 		searchToken += 1
 		local token = searchToken
-		local raw = searchBox.Text
-		query = safeLower(raw)
+		query = safeLower(searchBox.Text)
+
 		task.delay(0.10, function()
 			if token ~= searchToken then
 				return
@@ -751,17 +784,19 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		end)
 	end)
 
-	setCategory("All")
+	-- Init
+	selectedCategory = "All"
+	renderChips()
 	applyFeatured()
 	rebuild()
 
 	-- Responsive sizing
-	local function onSizeChanged()
+	body:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		updateGridForWidth(body.AbsoluteSize.X)
-	end
-
-	body:GetPropertyChangedSignal("AbsoluteSize"):Connect(onSizeChanged)
-	onSizeChanged()
+	end)
+	task.defer(function()
+		updateGridForWidth(body.AbsoluteSize.X)
+	end)
 
 	local api: Api = {} :: any
 	function api:getFrame()
