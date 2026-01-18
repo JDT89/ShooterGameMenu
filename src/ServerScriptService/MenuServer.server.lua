@@ -140,6 +140,18 @@ queueRequest.OnServerEvent:Connect(function(player: Player, payload: any)
 		return
 	end
 
+	if action == "Sync" then
+		local chosen = selectedModeByPlayer[player]
+		if typeof(chosen) ~= "string" then
+			chosen = "1v1"
+			selectedModeByPlayer[player] = chosen
+		end
+
+		local state = queuedByPlayer[player] and "searching" or "idle"
+		pushStatus(player, { state = state, modeId = chosen })
+		return
+	end
+
 	if action == "SelectMode" then
 		if not modeId then
 			return
