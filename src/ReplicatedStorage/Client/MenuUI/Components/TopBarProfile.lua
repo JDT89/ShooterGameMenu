@@ -1,11 +1,11 @@
 --!strict
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Theme = require(script.Parent.Parent:WaitForChild("Theme"))
 local UiUtil = require(script.Parent.Parent.Util:WaitForChild("UiUtil"))
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProfileConstants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProfileConstants"))
 
 export type Api = {
@@ -19,12 +19,14 @@ local TopBarProfile = {}
 function TopBarProfile.create(parent: Instance, player: Player): Api
 	local frame = Instance.new("Frame")
 	frame.Name = "TopBarProfile"
-	frame.BackgroundTransparency = 0.2
 	frame.BorderSizePixel = 0
-	frame.Size = UDim2.fromOffset(340, 48)
+	UiUtil.setBg(frame, Theme.Colors.Panel, Theme.Alpha.Panel)
+	frame.Size = UDim2.fromOffset(360, 48)
 	frame.Parent = parent
 
-	UiUtil.createCorner(12).Parent = frame
+	UiUtil.createCorner(Theme.Corner).Parent = frame
+	UiUtil.createStroke(Theme.Colors.Stroke, Theme.Alpha.Stroke, 1).Parent = frame
+	UiUtil.createGradient2(Theme.Colors.Panel3, Theme.Colors.Panel, 90).Parent = frame
 
 	local avatar = Instance.new("ImageLabel")
 	avatar.Name = "Avatar"
@@ -33,12 +35,12 @@ function TopBarProfile.create(parent: Instance, player: Player): Api
 	avatar.Position = UDim2.fromOffset(6, 4)
 	avatar.Image = UiUtil.getHeadshot(player.UserId)
 	avatar.Parent = frame
-	UiUtil.createCorner(20).Parent = avatar
+	UiUtil.createCorner(Theme.CornerPill).Parent = avatar
 
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "Name"
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(245, 245, 245)
+	nameLabel.TextColor3 = Theme.Colors.Text
 	nameLabel.Font = Theme.FontSemi
 	nameLabel.TextSize = 14
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -50,7 +52,7 @@ function TopBarProfile.create(parent: Instance, player: Player): Api
 	local levelLabel = Instance.new("TextLabel")
 	levelLabel.Name = "Level"
 	levelLabel.BackgroundTransparency = 1
-	levelLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
+	levelLabel.TextColor3 = Theme.Colors.Muted
 	levelLabel.Font = Theme.Font
 	levelLabel.TextSize = 12
 	levelLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -61,20 +63,22 @@ function TopBarProfile.create(parent: Instance, player: Player): Api
 
 	local barBg = Instance.new("Frame")
 	barBg.Name = "ExpBarBg"
-	barBg.BackgroundTransparency = 0.35
 	barBg.BorderSizePixel = 0
+	UiUtil.setBg(barBg, Theme.Colors.Panel3, 0.25)
 	barBg.Position = UDim2.fromOffset(54, 40)
 	barBg.Size = UDim2.new(1, -64, 0, 6)
 	barBg.Parent = frame
-	UiUtil.createCorner(6).Parent = barBg
+	UiUtil.createCorner(Theme.CornerPill).Parent = barBg
+	UiUtil.createStroke(Theme.Colors.Stroke, 0.92, 1).Parent = barBg
 
 	local barFill = Instance.new("Frame")
 	barFill.Name = "ExpBarFill"
-	barFill.BackgroundTransparency = 0
 	barFill.BorderSizePixel = 0
+	UiUtil.setBg(barFill, Theme.Colors.Accent, 0)
 	barFill.Size = UDim2.new(0, 0, 1, 0)
 	barFill.Parent = barBg
-	UiUtil.createCorner(6).Parent = barFill
+	UiUtil.createCorner(Theme.CornerPill).Parent = barFill
+	UiUtil.createGradient2(Theme.Colors.Accent, Theme.Colors.AccentSoft, 0).Parent = barFill
 
 	local function readAttrs()
 		local attrs = ProfileConstants.Attributes
@@ -82,9 +86,15 @@ function TopBarProfile.create(parent: Instance, player: Player): Api
 		local exp = player:GetAttribute(attrs.Exp)
 		local expToNext = player:GetAttribute(attrs.ExpToNext)
 
-		if typeof(level) ~= "number" then level = 1 end
-		if typeof(exp) ~= "number" then exp = 0 end
-		if typeof(expToNext) ~= "number" or expToNext <= 0 then expToNext = 100 end
+		if typeof(level) ~= "number" then
+			level = 1
+		end
+		if typeof(exp) ~= "number" then
+			exp = 0
+		end
+		if typeof(expToNext) ~= "number" or expToNext <= 0 then
+			expToNext = 100
+		end
 
 		return level :: number, exp :: number, expToNext :: number
 	end
