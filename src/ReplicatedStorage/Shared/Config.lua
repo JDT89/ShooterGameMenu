@@ -4,8 +4,6 @@ local Config = {}
 Config.Debug = true
 Config.GameName = "RivalsLike"
 
--- PlaceIds can be defined per mode in ModeCatalog (recommended).
--- Keep these for global/fallback use if needed.
 Config.DefaultPlaceIds = {
 	Lobby = 0,
 }
@@ -13,20 +11,21 @@ Config.DefaultPlaceIds = {
 Config.Remotes = {
 	FolderName = "Remotes",
 	MenuFolderName = "Menu",
-
-	-- Client -> Server (request to queue / cancel / select mode)
 	QueueRequest = "QueueRequest",
-
-	-- Server -> Client (push status updates: searching/found/teleporting/errors)
 	QueueStatus = "QueueStatus",
 }
 
 Config.UI = {
+	-- Lobby/menu is designed to feel like a full-screen product.
+	-- Set to false if you want Roblox's default topbar/chat visible.
+	HideCoreGui = true,
+
+	-- Adds subtle Blur/ColorCorrection in Lighting (3D only).
+	UseLightingEffects = true,
+
 	Nav = {
-		-- Responsive breakpoints (screen width in px)
-		ExpandedMinWidth = 1100, -- icons + labels
-		IconOnlyMinWidth = 760,  -- icons only
-		-- below this: drawer mode (hamburger)
+		ExpandedMinWidth = 1100,
+		IconOnlyMinWidth = 760,
 
 		RailWidthExpanded = 260,
 		RailWidthIconOnly = 72,
@@ -35,14 +34,14 @@ Config.UI = {
 
 	RightPanel = {
 		Width = 320,
-		MinWidthToShow = 900, -- hide/collapse party panel under this width
+		MinWidthToShow = 900,
 	},
 }
 
 Config.Network = {
 	QueueRequestRateLimit = {
 		Capacity = 8,
-		RefillPerSecond = 1.25, -- tokens/sec per player
+		RefillPerSecond = 1.25,
 	},
 }
 
