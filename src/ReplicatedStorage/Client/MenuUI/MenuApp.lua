@@ -1,17 +1,15 @@
 --!strict
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local menuRoot = script.Parent
 
-local Theme = require(script:WaitForChild("Theme"))
-local TweenUtil = require(script.Util:WaitForChild("TweenUtil"))
+local Theme = require(menuRoot:WaitForChild("Theme"))
+local TweenUtil = require(menuRoot:WaitForChild("Util"):WaitForChild("TweenUtil"))
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local NavRail = require(menuRoot:WaitForChild("Components"):WaitForChild("NavRail"))
+local TopBarProfile = require(menuRoot:WaitForChild("Components"):WaitForChild("TopBarProfile"))
+local PlayPage = require(menuRoot:WaitForChild("Pages"):WaitForChild("PlayPage"))
+local PlaceholderPage = require(menuRoot:WaitForChild("Pages"):WaitForChild("PlaceholderPage"))
 
-local NavRail = require(script.Components:WaitForChild("NavRail"))
-local TopBarProfile = require(script.Components:WaitForChild("TopBarProfile"))
-local PlayPage = require(script.Pages:WaitForChild("PlayPage"))
-local PlaceholderPage = require(script.Pages:WaitForChild("PlaceholderPage"))
 
 export type MountOptions = {
 	onSelectMode: (modeId: string) -> (),
