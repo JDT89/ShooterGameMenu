@@ -2,8 +2,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Theme = require(script.Parent.Parent:WaitForChild("Theme"))
-local UiUtil = require(script.Parent.Parent.Util:WaitForChild("UiUtil"))
+local menuRoot = script.Parent.Parent
+local Theme = require(menuRoot:WaitForChild("Theme"))
+local utilRoot = menuRoot:WaitForChild("Util")
+local UiUtil = require(utilRoot:WaitForChild("UiUtil"))
+local TweenUtil = require(utilRoot:WaitForChild("TweenUtil"))
 local ModeCatalog = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ModeCatalog"))
 
 export type Api = {
@@ -12,6 +15,16 @@ export type Api = {
 }
 
 local PlayPage = {}
+
+local function clamp(n: number, lo: number, hi: number): number
+	if n < lo then
+		return lo
+	end
+	if n > hi then
+		return hi
+	end
+	return n
+end
 
 function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ()): Api
 	local frame = Instance.new("Frame")
@@ -41,18 +54,49 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	scroller.ScrollBarThickness = 6
 	scroller.Parent = frame
 
+	local pad = Instance.new("UIPadding")
+	pad.PaddingBottom = UDim.new(0, 12)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.Parent = scroller
+
 	local grid = Instance.new("UIGridLayout")
 	grid.CellPadding = UDim2.fromOffset(14, 14)
 	grid.CellSize = UDim2.fromOffset(320, 190)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = scroller
 
-	local pad = Instance.new("UIPadding")
-	pad.PaddingBottom = UDim.new(0, 12)
-	pad.PaddingRight = UDim.new(0, 12)
-	pad.Parent = scroller
-
 	local activeModeId = ""
+
+	local cardUpdaters: { [string]: (boolean) -> () } = {}
+
+	local function updateCanvas()
+		scroller.CanvasSize = UDim2.fromOffset(0, grid.AbsoluteContentSize.Y + 20)
+	end
+
+	local function updateGridForWidth(width: number)
+		-- Responsive columns. Keeps cards readable across PC/console/mobile landscape.
+		local columns = 1
+		if width >= 1100 then
+			columns = 3
+		elseif width >= 720 then
+			columns = 2
+		end
+
+		local paddingX = 12 -- approximate padding+scrollbar
+		local spacing = 14
+		local available = math.max(320, width - paddingX)
+		local cellW = (available - ((columns - 1) * spacing)) / columns
+		cellW = clamp(cellW, 280, 380)
+		local cellH = clamp(math.floor(cellW * 0.6), 170, 220)
+		grid.CellSize = UDim2.fromOffset(cellW, cellH)
+	end
+
+	local function setSelected(modeId: string)
+		activeModeId = modeId
+		for id, fn in pairs(cardUpdaters) do
+			fn(id == modeId)
+		end
+	end
 
 	local function makeCard(mode)
 		local card = Instance.new("TextButton")
@@ -107,7 +151,8 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		footer.Font = Theme.FontSemi
 		footer.TextSize = 12
 		footer.TextXAlignment = Enum.TextXAlignment.Left
-		footer.Position = UDim2.fromOffset(14, 150)
+		footer.Position = UDim2.fromOffset(14, -18)
+		footer.AnchorPoint = Vector2.new(0, 1)
 		footer.Size = UDim2.new(1, -28, 0, 16)
 		footer.Text = string.format("%d-%d players", mode.minPlayers, mode.maxPlayers)
 		footer.Parent = card
@@ -119,13 +164,16 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 		lock.Font = Theme.FontBold
 		lock.TextSize = 16
 		lock.Text = "🔒 COMING SOON"
-		lock.Position = UDim2.fromOffset(14, 150)
+		lock.Position = UDim2.fromOffset(14, -18)
+		lock.AnchorPoint = Vector2.new(0, 1)
 		lock.Size = UDim2.new(1, -28, 0, 16)
 		lock.Visible = (mode.comingSoon == true) or (mode.enabled == false)
 		lock.Parent = card
 
 		local function applyActive(isActive: boolean)
-			card.BackgroundTransparency = isActive and 0.06 or 0.18
+			TweenUtil.tween(card, Theme.Anim.Fast, {
+				BackgroundTransparency = isActive and 0.06 or 0.18,
+			})
 		end
 
 		applyActive(mode.id == activeModeId)
@@ -134,14 +182,12 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 			if mode.enabled == false or mode.comingSoon == true then
 				return
 			end
-			activeModeId = mode.id
+			setSelected(mode.id)
 			onSelectMode(mode.id)
 		end)
 
 		return card, applyActive
 	end
-
-	local cardUpdaters: { [string]: (boolean) -> () } = {}
 
 	local function rebuild()
 		for _, child in ipairs(scroller:GetChildren()) do
@@ -153,14 +199,19 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 
 		local modes = ModeCatalog.getAll()
 		for _, mode in ipairs(modes) do
-			local card, applyActive = makeCard(mode)
+			local _, applyActive = makeCard(mode)
 			cardUpdaters[mode.id] = applyActive
 		end
 
-		task.defer(function()
-			scroller.CanvasSize = UDim2.fromOffset(0, grid.AbsoluteContentSize.Y + 20)
-		end)
+		updateCanvas()
 	end
+
+	-- Live canvas sizing
+	grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+	frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		updateGridForWidth(scroller.AbsoluteSize.X)
+	end)
+	updateGridForWidth(scroller.AbsoluteSize.X)
 
 	rebuild()
 
@@ -170,10 +221,7 @@ function PlayPage.create(parent: Instance, onSelectMode: (modeId: string) -> ())
 	end
 
 	function api:setSelectedMode(modeId: string)
-		activeModeId = modeId
-		for id, fn in pairs(cardUpdaters) do
-			fn(id == modeId)
-		end
+		setSelected(modeId)
 	end
 
 	return api
