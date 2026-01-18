@@ -1,5 +1,8 @@
 --!strict
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local menuRoot = script.Parent
 
 local Theme = require(menuRoot:WaitForChild("Theme"))
@@ -10,6 +13,7 @@ local TopBarProfile = require(menuRoot:WaitForChild("Components"):WaitForChild("
 local PlayPage = require(menuRoot:WaitForChild("Pages"):WaitForChild("PlayPage"))
 local PlaceholderPage = require(menuRoot:WaitForChild("Pages"):WaitForChild("PlaceholderPage"))
 
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 export type MountOptions = {
 	onSelectMode: (modeId: string) -> (),
@@ -176,9 +180,14 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local function setPage(newPage: Frame)
 		if currentPage then
 			local old = currentPage
-			TweenUtil.tween(old, Theme.Anim.Med, { Position = UDim2.fromOffset(-20, 0), BackgroundTransparency = 1 })
+			TweenUtil.tween(old, Theme.Anim.Med, {
+				Position = UDim2.fromOffset(-20, 0),
+				BackgroundTransparency = 1,
+			})
 			task.delay(Theme.Anim.Med, function()
-				if old.Parent then old:Destroy() end
+				if old.Parent then
+					old:Destroy()
+				end
 			end)
 		end
 
