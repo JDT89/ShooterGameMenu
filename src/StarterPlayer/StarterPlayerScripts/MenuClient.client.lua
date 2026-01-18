@@ -41,6 +41,19 @@ local function tryHideCoreUi()
 	end
 end
 
+-- In Studio + on first load, SetCore can fail until CoreScripts finish booting.
+-- We retry a few times so Roblox's top bar/chat don't pop back in and ruin the premium menu.
+local function hideCoreUiWithRetries()
+	if not (Config.UI and Config.UI.HideCoreGui) then
+		return
+	end
+
+	for _ = 1, 12 do
+		tryHideCoreUi()
+		task.wait(0.25)
+	end
+end
+
 local function ensureLightingEffect(className: string, name: string): Instance
 	local existing = Lighting:FindFirstChild(name)
 	if existing and existing.ClassName == className then
@@ -74,7 +87,7 @@ local function applyMenuLighting()
 end
 
 task.defer(function()
-	tryHideCoreUi()
+	task.spawn(hideCoreUiWithRetries)
 	applyMenuLighting()
 end)
 
@@ -113,7 +126,6 @@ local function showFatalUi(errorText: string)
 	body.Size = UDim2.new(1, -48, 1, -72)
 	body.Position = UDim2.fromOffset(24, 56)
 
-	-- Avoid mega spam on screen if error is huge
 	local trimmed = errorText
 	if #trimmed > 1400 then
 		trimmed = trimmed:sub(1, 1400) .. "\n…(trimmed)"
@@ -122,7 +134,6 @@ local function showFatalUi(errorText: string)
 	body.Parent = bg
 end
 
--- Safely require MenuApp so a module error doesn't silently kill UI.
 local okRequire, MenuAppOrErr = pcall(function()
 	return require(Client:WaitForChild("MenuUI"):WaitForChild("MenuApp"))
 end)
@@ -134,11 +145,6 @@ if not okRequire then
 end
 
 local MenuApp = MenuAppOrErr :: any
-
--- IMPORTANT:
--- Do NOT hard-block the UI on Remotes existing.
--- If MenuServer isn't running, WaitForChild("Remotes") would hang forever and the menu would never appear.
--- We mount UI immediately and wire remotes asynchronously.
 
 local queueRequest: RemoteEvent? = nil
 local queueStatus: RemoteEvent? = nil
@@ -204,10 +210,6 @@ local function waitForInstance(parent: Instance, childName: string, timeoutSec: 
 	return inst
 end
 
--- Wire server remotes and request a state sync.
--- NOTE: The server may have fired initial status before the client connected.
--- We always send a "Sync" request once we are listening to QueueStatus.
-
 task.spawn(function()
 	local remotesRoot = waitForInstance(ReplicatedStorage, Config.Remotes.FolderName, 10)
 	if not (remotesRoot and remotesRoot:IsA("Folder")) then
@@ -244,6 +246,5 @@ task.spawn(function()
 		app:setQueueStatus(payload)
 	end)
 
-	-- Request current selection + queue state from server
 	queueRequest:FireServer({ action = "Sync" })
 end)
