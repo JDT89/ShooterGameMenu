@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local menuRoot = script.Parent
 
 local Theme = require(menuRoot:WaitForChild("Theme"))
+local UiUtil = require(menuRoot:WaitForChild("Util"):WaitForChild("UiUtil"))
 local TweenUtil = require(menuRoot:WaitForChild("Util"):WaitForChild("TweenUtil"))
 
 local NavRail = require(menuRoot:WaitForChild("Components"):WaitForChild("NavRail"))
@@ -50,6 +51,55 @@ local function getModeDisplayName(modeId: string): string
 	return modeId
 end
 
+local function stylePanel(panel: Frame, strong: boolean?)
+	panel.BorderSizePixel = 0
+	panel.BackgroundColor3 = Theme.Colors.Panel
+	panel.BackgroundTransparency = strong and Theme.Alpha.PanelStrong or Theme.Alpha.Panel
+	UiUtil.createCorner(Theme.Corner).Parent = panel
+	UiUtil.createStroke(Theme.Colors.Stroke, strong and Theme.Alpha.StrokeStrong or Theme.Alpha.Stroke, 1).Parent = panel
+	UiUtil.createGradient2(Theme.Colors.Panel3, Theme.Colors.Panel, 90).Parent = panel
+end
+
+local function styleButtonPrimary(btn: TextButton)
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.BackgroundColor3 = Theme.Colors.AccentSoft
+	btn.BackgroundTransparency = 0
+	btn.TextColor3 = Theme.Colors.Text
+	btn.Font = Theme.FontBold
+	btn.TextSize = 15
+	UiUtil.createCorner(Theme.CornerSmall).Parent = btn
+	UiUtil.createStroke(Theme.Colors.Stroke, 0.88, 1).Parent = btn
+	UiUtil.createGradient2(Theme.Colors.Accent, Theme.Colors.AccentSoft, 90).Parent = btn
+end
+
+local function styleButtonSecondary(btn: TextButton)
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.BackgroundColor3 = Theme.Colors.Panel2
+	btn.BackgroundTransparency = Theme.Alpha.ButtonIdle
+	btn.TextColor3 = Theme.Colors.Text
+	btn.Font = Theme.FontSemi
+	btn.TextSize = 14
+	UiUtil.createCorner(Theme.CornerSmall).Parent = btn
+	UiUtil.createStroke(Theme.Colors.Stroke, Theme.Alpha.Stroke, 1).Parent = btn
+end
+
+local function styleButtonHover(btn: TextButton, baseAlpha: number, hoverAlpha: number)
+	btn.MouseEnter:Connect(function()
+		TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = hoverAlpha })
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = baseAlpha })
+	end)
+	btn.MouseButton1Down:Connect(function()
+		TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = Theme.Alpha.ButtonDown })
+	end)
+	btn.MouseButton1Up:Connect(function()
+		TweenUtil.tween(btn, Theme.Anim.Fast, { BackgroundTransparency = hoverAlpha })
+	end)
+end
+
 function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local player = Players.LocalPlayer
 
@@ -58,30 +108,34 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	screenGui.IgnoreGuiInset = true
 	screenGui.ResetOnSpawn = false
 	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screenGui.DisplayOrder = 10
 	screenGui.Parent = playerGui
 
 	local root = Instance.new("Frame")
 	root.Name = "Root"
-	root.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 	root.BorderSizePixel = 0
 	root.Size = UDim2.fromScale(1, 1)
+	root.BackgroundColor3 = Theme.Colors.Background
+	root.BackgroundTransparency = 0
 	root.Parent = screenGui
+	UiUtil.createGradient2(Theme.Colors.Background2, Theme.Colors.Background, 90).Parent = root
 
-	-- subtle overlay
+	-- Subtle vignette overlay
 	local overlay = Instance.new("Frame")
 	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	overlay.BackgroundTransparency = 0.55
+	overlay.BackgroundTransparency = 0.35
 	overlay.BorderSizePixel = 0
 	overlay.Size = UDim2.fromScale(1, 1)
 	overlay.Parent = root
+	UiUtil.createGradient2(Color3.fromRGB(0, 0, 0), Color3.fromRGB(0, 0, 0), 90).Parent = overlay
 
 	-- Top bar
 	local topBar = Instance.new("Frame")
 	topBar.Name = "TopBar"
-	topBar.BackgroundTransparency = 0.2
-	topBar.BorderSizePixel = 0
 	topBar.Size = UDim2.new(1, 0, 0, 64)
+	topBar.Position = UDim2.fromOffset(0, 0)
 	topBar.Parent = root
+	stylePanel(topBar, true)
 
 	local topLeft = Instance.new("Frame")
 	topLeft.Name = "TopLeft"
@@ -100,24 +154,19 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local hamburger = Instance.new("TextButton")
 	hamburger.Name = "Hamburger"
-	hamburger.AutoButtonColor = false
-	hamburger.BackgroundTransparency = 0.65
-	hamburger.BorderSizePixel = 0
 	hamburger.Size = UDim2.fromOffset(40, 40)
 	hamburger.Text = "≡"
-	hamburger.Font = Theme.FontBold
-	hamburger.TextSize = 20
-	hamburger.TextColor3 = Color3.fromRGB(245, 245, 245)
 	hamburger.Visible = false
 	hamburger.Selectable = true
 	hamburger.Parent = topLeft
-	local hamburgerCorner = Instance.new("UICorner")
-	hamburgerCorner.CornerRadius = UDim.new(0, Theme.CornerSmall)
-	hamburgerCorner.Parent = hamburger
+	styleButtonSecondary(hamburger)
+	hamburger.TextSize = 18
+	hamburger.BackgroundTransparency = 0.28
+	styleButtonHover(hamburger, hamburger.BackgroundTransparency, 0.18)
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(245, 245, 245)
+	title.TextColor3 = Theme.Colors.Text
 	title.Font = Theme.FontBold
 	title.TextSize = 18
 	title.TextXAlignment = Enum.TextXAlignment.Left
@@ -150,28 +199,30 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	contentHost.Size = UDim2.new(1, -(Config.UI.Nav.RailWidthExpanded + Config.UI.RightPanel.Width), 1, 0)
 	contentHost.Parent = main
 
+	local contentPad = Instance.new("UIPadding")
+	contentPad.PaddingLeft = UDim.new(0, 18)
+	contentPad.PaddingRight = UDim.new(0, 18)
+	contentPad.PaddingTop = UDim.new(0, 18)
+	contentPad.PaddingBottom = UDim.new(0, 18)
+	contentPad.Parent = contentHost
+
 	local rightPanel = Instance.new("Frame")
 	rightPanel.Name = "RightPanel"
-	rightPanel.BackgroundTransparency = 0.18
-	rightPanel.BorderSizePixel = 0
 	rightPanel.AnchorPoint = Vector2.new(1, 0)
 	rightPanel.Position = UDim2.new(1, 0, 0, 0)
 	rightPanel.Size = UDim2.fromOffset(Config.UI.RightPanel.Width, 0)
 	rightPanel.Parent = main
+	stylePanel(rightPanel, false)
 
-	-- Bottom queue bar (shown when right panel is collapsed; mobile/tablet/console friendly)
+	-- Bottom queue bar (shown when right panel is collapsed)
 	local bottomBar = Instance.new("Frame")
 	bottomBar.Name = "BottomBar"
-	bottomBar.BackgroundTransparency = 0.18
-	bottomBar.BorderSizePixel = 0
 	bottomBar.AnchorPoint = Vector2.new(0, 1)
 	bottomBar.Position = UDim2.new(0, 0, 1, 0)
 	bottomBar.Size = UDim2.new(1, 0, 0, 76)
 	bottomBar.Visible = false
 	bottomBar.Parent = main
-	local bottomCorner = Instance.new("UICorner")
-	bottomCorner.CornerRadius = UDim.new(0, Theme.Corner)
-	bottomCorner.Parent = bottomBar
+	stylePanel(bottomBar, false)
 
 	local bottomPad = Instance.new("UIPadding")
 	bottomPad.PaddingLeft = UDim.new(0, 14)
@@ -189,7 +240,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local bottomTitle = Instance.new("TextLabel")
 	bottomTitle.Name = "BottomTitle"
 	bottomTitle.BackgroundTransparency = 1
-	bottomTitle.TextColor3 = Color3.fromRGB(245, 245, 245)
+	bottomTitle.TextColor3 = Theme.Colors.Text
 	bottomTitle.Font = Theme.FontBold
 	bottomTitle.TextSize = 14
 	bottomTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -200,7 +251,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local bottomStatus = Instance.new("TextLabel")
 	bottomStatus.Name = "BottomStatus"
 	bottomStatus.BackgroundTransparency = 1
-	bottomStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
+	bottomStatus.TextColor3 = Theme.Colors.Muted
 	bottomStatus.Font = Theme.Font
 	bottomStatus.TextSize = 13
 	bottomStatus.TextXAlignment = Enum.TextXAlignment.Left
@@ -227,35 +278,20 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local bottomReady = Instance.new("TextButton")
 	bottomReady.Name = "ReadyUp"
-	bottomReady.AutoButtonColor = false
-	bottomReady.BackgroundTransparency = 0.05
-	bottomReady.BorderSizePixel = 0
 	bottomReady.Size = UDim2.fromOffset(120, 44)
 	bottomReady.Text = "READY"
-	bottomReady.Font = Theme.FontBold
-	bottomReady.TextSize = 14
-	bottomReady.TextColor3 = Color3.fromRGB(245, 245, 245)
 	bottomReady.Selectable = true
 	bottomReady.Parent = bottomButtons
-	local bottomReadyCorner = Instance.new("UICorner")
-	bottomReadyCorner.CornerRadius = UDim.new(0, Theme.CornerSmall)
-	bottomReadyCorner.Parent = bottomReady
+	styleButtonPrimary(bottomReady)
 
 	local bottomCancel = Instance.new("TextButton")
 	bottomCancel.Name = "Cancel"
-	bottomCancel.AutoButtonColor = false
-	bottomCancel.BackgroundTransparency = 0.6
-	bottomCancel.BorderSizePixel = 0
 	bottomCancel.Size = UDim2.fromOffset(90, 44)
 	bottomCancel.Text = "CANCEL"
-	bottomCancel.Font = Theme.FontSemi
-	bottomCancel.TextSize = 13
-	bottomCancel.TextColor3 = Color3.fromRGB(235, 235, 235)
 	bottomCancel.Selectable = true
 	bottomCancel.Parent = bottomButtons
-	local bottomCancelCorner = Instance.new("UICorner")
-	bottomCancelCorner.CornerRadius = UDim.new(0, Theme.CornerSmall)
-	bottomCancelCorner.Parent = bottomCancel
+	styleButtonSecondary(bottomCancel)
+	styleButtonHover(bottomCancel, bottomCancel.BackgroundTransparency, Theme.Alpha.ButtonHover)
 
 	-- Drawer overlay (mobile landscape)
 	local drawerOverlay = Instance.new("Frame")
@@ -286,15 +322,16 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local drawer = Instance.new("Frame")
 	drawer.Name = "Drawer"
-	drawer.BackgroundTransparency = 0.08
 	drawer.BorderSizePixel = 0
+	drawer.BackgroundColor3 = Theme.Colors.Panel
+	drawer.BackgroundTransparency = Theme.Alpha.PanelStrong
 	drawer.Size = UDim2.new(0, Config.UI.Nav.RailWidthDrawer, 1, 0)
 	drawer.Position = UDim2.fromOffset(-Config.UI.Nav.RailWidthDrawer, 0)
 	drawer.ZIndex = 52
 	drawer.Parent = drawerOverlay
-	local drawerCorner = Instance.new("UICorner")
-	drawerCorner.CornerRadius = UDim.new(0, Theme.Corner)
-	drawerCorner.Parent = drawer
+	UiUtil.createCorner(Theme.Corner).Parent = drawer
+	UiUtil.createStroke(Theme.Colors.Stroke, Theme.Alpha.Stroke, 1).Parent = drawer
+	UiUtil.createGradient2(Theme.Colors.Panel3, Theme.Colors.Panel, 90).Parent = drawer
 
 	local drawerPad = Instance.new("UIPadding")
 	drawerPad.PaddingTop = UDim.new(0, 10)
@@ -305,7 +342,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local drawerTitle = Instance.new("TextLabel")
 	drawerTitle.BackgroundTransparency = 1
-	drawerTitle.TextColor3 = Color3.fromRGB(245, 245, 245)
+	drawerTitle.TextColor3 = Theme.Colors.Text
 	drawerTitle.Font = Theme.FontBold
 	drawerTitle.TextSize = 16
 	drawerTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -339,7 +376,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local rpTitle = Instance.new("TextLabel")
 	rpTitle.BackgroundTransparency = 1
-	rpTitle.TextColor3 = Color3.fromRGB(245, 245, 245)
+	rpTitle.TextColor3 = Theme.Colors.Text
 	rpTitle.Font = Theme.FontBold
 	rpTitle.TextSize = 18
 	rpTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -351,7 +388,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local selectedModeLabel = Instance.new("TextLabel")
 	selectedModeLabel.Name = "SelectedMode"
 	selectedModeLabel.BackgroundTransparency = 1
-	selectedModeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	selectedModeLabel.TextColor3 = Theme.Colors.Muted
 	selectedModeLabel.Font = Theme.Font
 	selectedModeLabel.TextSize = 13
 	selectedModeLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -363,7 +400,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "QueueStatus"
 	statusLabel.BackgroundTransparency = 1
-	statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+	statusLabel.TextColor3 = Theme.Colors.Muted
 	statusLabel.Font = Theme.Font
 	statusLabel.TextSize = 14
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -374,37 +411,22 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local readyBtn = Instance.new("TextButton")
 	readyBtn.Name = "ReadyUp"
-	readyBtn.AutoButtonColor = false
-	readyBtn.BackgroundTransparency = 0.05
-	readyBtn.BorderSizePixel = 0
 	readyBtn.Size = UDim2.new(1, 0, 0, 48)
 	readyBtn.Position = UDim2.new(0, 0, 0, 76)
 	readyBtn.Text = "READY UP"
-	readyBtn.Font = Theme.FontBold
-	readyBtn.TextSize = 16
-	readyBtn.TextColor3 = Color3.fromRGB(245, 245, 245)
 	readyBtn.Parent = queueSection
 	readyBtn.Selectable = true
-	local readyCorner = Instance.new("UICorner")
-	readyCorner.CornerRadius = UDim.new(0, Theme.CornerSmall)
-	readyCorner.Parent = readyBtn
+	styleButtonPrimary(readyBtn)
 
 	local cancelBtn = Instance.new("TextButton")
 	cancelBtn.Name = "Cancel"
-	cancelBtn.AutoButtonColor = false
-	cancelBtn.BackgroundTransparency = 0.6
-	cancelBtn.BorderSizePixel = 0
 	cancelBtn.Size = UDim2.new(1, 0, 0, 40)
 	cancelBtn.Position = UDim2.new(0, 0, 0, 130)
 	cancelBtn.Text = "CANCEL"
-	cancelBtn.Font = Theme.FontSemi
-	cancelBtn.TextSize = 14
-	cancelBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
 	cancelBtn.Parent = queueSection
 	cancelBtn.Selectable = true
-	local cancelCorner = Instance.new("UICorner")
-	cancelCorner.CornerRadius = UDim.new(0, Theme.CornerSmall)
-	cancelCorner.Parent = cancelBtn
+	styleButtonSecondary(cancelBtn)
+	styleButtonHover(cancelBtn, cancelBtn.BackgroundTransparency, Theme.Alpha.ButtonHover)
 
 	local partySection = Instance.new("Frame")
 	partySection.Name = "PartySection"
@@ -445,9 +467,11 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 		end
 	end
 
-	local function setQueueText(text: string)
+	local function setQueueText(text: string, color: Color3?)
 		statusLabel.Text = text
 		bottomStatus.Text = text
+		statusLabel.TextColor3 = color or Theme.Colors.Muted
+		bottomStatus.TextColor3 = color or Theme.Colors.Muted
 	end
 
 	local function setPage(newPage: Frame)
@@ -472,6 +496,7 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 
 	local function mountRoute(routeId: string)
 		contentHost:ClearAllChildren()
+		contentPad.Parent = contentHost
 		playPageApi = nil
 
 		if routeId == "play" then
@@ -544,10 +569,12 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 		rightPanel.Visible = showRight
 		bottomBar.Visible = not showRight
 		local bottomH = (not showRight) and 76 or 0
-		bottomBar.Position = UDim2.new(0, 0, 1, 0)
+
 		local rightW = showRight and Config.UI.RightPanel.Width or 0
 		rightPanel.Size = UDim2.new(0, Config.UI.RightPanel.Width, 1, -bottomH)
 		rightPanel.Position = UDim2.new(1, 0, 0, 0)
+		bottomBar.Position = UDim2.new(0, 0, 1, 0)
+		bottomBar.Size = UDim2.new(1, 0, 0, 76)
 
 		local newDrawerMode = w < Config.UI.Nav.IconOnlyMinWidth
 		isDrawerMode = newDrawerMode
@@ -555,7 +582,6 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 		if isDrawerMode then
 			hamburger.Visible = true
 			navHost.Visible = false
-			-- Re-parent nav into drawer host (expanded)
 			nav:getFrame().Parent = drawerNavHost
 			nav:setMode("Expanded")
 
@@ -638,7 +664,20 @@ function MenuApp.mount(playerGui: PlayerGui, opts: MountOptions): App
 		if typeof(msg) == "string" and #msg > 0 then
 			text = state .. " • " .. msg
 		end
-		setQueueText(text)
+
+		local color = Theme.Colors.Muted
+		local s = string.lower(state)
+		if s == "searching" then
+			color = Theme.Colors.Accent
+		elseif s == "found" then
+			color = Theme.Colors.Success
+		elseif s == "teleporting" then
+			color = Theme.Colors.Warning
+		elseif s == "error" then
+			color = Theme.Colors.Danger
+		end
+
+		setQueueText(text, color)
 	end
 
 	return app
