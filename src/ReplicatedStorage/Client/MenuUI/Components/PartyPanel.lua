@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local menuRoot = script.Parent.Parent
 local Theme = require(menuRoot:WaitForChild("Theme"))
 local UiUtil = require(menuRoot:WaitForChild("Util"):WaitForChild("UiUtil"))
+local TweenUtil = require(menuRoot:WaitForChild("Util"):WaitForChild("TweenUtil"))
 
 export type PartyMember = {
 	userId: number,
@@ -22,7 +23,7 @@ local PartyPanel = {}
 local function createHeader(parent: Instance, text: string): TextLabel
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(245, 245, 245)
+	label.TextColor3 = Theme.Colors.Text
 	label.Font = Theme.FontBold
 	label.TextSize = 16
 	label.TextXAlignment = Enum.TextXAlignment.Left
@@ -32,13 +33,26 @@ local function createHeader(parent: Instance, text: string): TextLabel
 	return label
 end
 
-local function createRow(parent: Instance): Frame
+local function createRow(parent: Instance): (Frame, Frame)
 	local row = Instance.new("Frame")
-	row.BackgroundTransparency = 0.55
+	row.BackgroundColor3 = Theme.Colors.Panel2
+	row.BackgroundTransparency = Theme.Alpha.ButtonIdle
 	row.BorderSizePixel = 0
 	row.Size = UDim2.new(1, 0, 0, 44)
 	row.Parent = parent
 	UiUtil.createCorner(Theme.CornerSmall).Parent = row
+	UiUtil.createStroke(Theme.Colors.Stroke, Theme.Alpha.Stroke, 1).Parent = row
+	UiUtil.createGradient2(Theme.Colors.Panel3, Theme.Colors.Panel2, 90).Parent = row
+
+	local hover = Instance.new("Frame")
+	hover.Name = "Hover"
+	hover.BackgroundColor3 = Theme.Colors.Accent
+	hover.BackgroundTransparency = 1
+	hover.BorderSizePixel = 0
+	hover.Size = UDim2.fromScale(1, 1)
+	hover.ZIndex = 2
+	hover.Parent = row
+	UiUtil.createCorner(Theme.CornerSmall).Parent = hover
 
 	local avatar = Instance.new("ImageLabel")
 	avatar.Name = "Avatar"
@@ -51,7 +65,7 @@ local function createRow(parent: Instance): Frame
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "Name"
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
+	nameLabel.TextColor3 = Theme.Colors.Text
 	nameLabel.Font = Theme.FontSemi
 	nameLabel.TextSize = 14
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -63,7 +77,7 @@ local function createRow(parent: Instance): Frame
 	local metaLabel = Instance.new("TextLabel")
 	metaLabel.Name = "Meta"
 	metaLabel.BackgroundTransparency = 1
-	metaLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+	metaLabel.TextColor3 = Theme.Colors.Muted
 	metaLabel.Font = Theme.Font
 	metaLabel.TextSize = 12
 	metaLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -72,7 +86,19 @@ local function createRow(parent: Instance): Frame
 	metaLabel.Text = ""
 	metaLabel.Parent = row
 
-	return row
+	local function setHover(a: number)
+		hover.BackgroundTransparency = a
+	end
+
+	row.MouseEnter:Connect(function()
+		TweenUtil.tween(hover, Theme.Anim.Fast, { BackgroundTransparency = 0.92 })
+	end)
+	row.MouseLeave:Connect(function()
+		TweenUtil.tween(hover, Theme.Anim.Fast, { BackgroundTransparency = 1 })
+	end)
+
+	setHover(1)
+	return row, hover
 end
 
 function PartyPanel.create(parent: Instance, initialMembers: { PartyMember }?): Api
@@ -87,20 +113,20 @@ function PartyPanel.create(parent: Instance, initialMembers: { PartyMember }?): 
 
 	local sub = Instance.new("TextLabel")
 	sub.BackgroundTransparency = 1
-	sub.TextColor3 = Color3.fromRGB(180, 180, 180)
+	sub.TextColor3 = Theme.Colors.Subtle
 	sub.Font = Theme.Font
 	sub.TextSize = 12
 	sub.TextXAlignment = Enum.TextXAlignment.Left
 	sub.Position = UDim2.fromOffset(0, 22)
 	sub.Size = UDim2.new(1, 0, 0, 16)
-	sub.Text = "Party features will expand next phase."
+	sub.Text = "Invite + party syncing ships next phase."
 	sub.Parent = frame
 
 	local listHost = Instance.new("Frame")
 	listHost.Name = "ListHost"
 	listHost.BackgroundTransparency = 1
 	listHost.Position = UDim2.fromOffset(0, 44)
-	listHost.Size = UDim2.new(1, 0, 1, -90)
+	listHost.Size = UDim2.new(1, 0, 1, -94)
 	listHost.Parent = frame
 
 	local list = Instance.new("UIListLayout")
@@ -112,18 +138,39 @@ function PartyPanel.create(parent: Instance, initialMembers: { PartyMember }?): 
 	local inviteBtn = Instance.new("TextButton")
 	inviteBtn.Name = "Invite"
 	inviteBtn.AutoButtonColor = false
-	inviteBtn.BackgroundTransparency = 0.65
+	inviteBtn.BackgroundColor3 = Theme.Colors.Panel2
+	inviteBtn.BackgroundTransparency = Theme.Alpha.ButtonIdle
 	inviteBtn.BorderSizePixel = 0
 	inviteBtn.Size = UDim2.new(1, 0, 0, 40)
 	inviteBtn.AnchorPoint = Vector2.new(0, 1)
 	inviteBtn.Position = UDim2.new(0, 0, 1, 0)
-	inviteBtn.Text = "INVITE (soon)"
+	inviteBtn.Text = "INVITE"
 	inviteBtn.Font = Theme.FontSemi
 	inviteBtn.TextSize = 14
-	inviteBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+	inviteBtn.TextColor3 = Theme.Colors.Subtle
 	inviteBtn.Selectable = true
 	inviteBtn.Parent = frame
 	UiUtil.createCorner(Theme.CornerSmall).Parent = inviteBtn
+	UiUtil.createStroke(Theme.Colors.Stroke, Theme.Alpha.Stroke, 1).Parent = inviteBtn
+
+	local inviteHint = Instance.new("TextLabel")
+	inviteHint.BackgroundTransparency = 1
+	inviteHint.TextColor3 = Theme.Colors.Subtle
+	inviteHint.Font = Theme.Font
+	inviteHint.TextSize = 11
+	inviteHint.TextXAlignment = Enum.TextXAlignment.Right
+	inviteHint.AnchorPoint = Vector2.new(1, 0.5)
+	inviteHint.Position = UDim2.new(1, -10, 0.5, 0)
+	inviteHint.Size = UDim2.fromOffset(110, 14)
+	inviteHint.Text = "soon"
+	inviteHint.Parent = inviteBtn
+
+	inviteBtn.MouseEnter:Connect(function()
+		TweenUtil.tween(inviteBtn, Theme.Anim.Fast, { BackgroundTransparency = Theme.Alpha.ButtonHover })
+	end)
+	inviteBtn.MouseLeave:Connect(function()
+		TweenUtil.tween(inviteBtn, Theme.Anim.Fast, { BackgroundTransparency = Theme.Alpha.ButtonIdle })
+	end)
 
 	local rows: { Frame } = {}
 
@@ -139,14 +186,19 @@ function PartyPanel.create(parent: Instance, initialMembers: { PartyMember }?): 
 		for i, m in ipairs(members) do
 			local row = createRow(listHost)
 			row.LayoutOrder = i
+
 			local avatar = row:FindFirstChild("Avatar") :: ImageLabel
 			local nameLabel = row:FindFirstChild("Name") :: TextLabel
 			local metaLabel = row:FindFirstChild("Meta") :: TextLabel
 
 			nameLabel.Text = m.name
 			metaLabel.Text = (m.isLeader and "Leader") or "Member"
+			if m.isLeader then
+				metaLabel.TextColor3 = Theme.Colors.Accent
+			else
+				metaLabel.TextColor3 = Theme.Colors.Muted
+			end
 
-			-- Thumbnail fetch can yield; do it off-thread.
 			task.spawn(function()
 				local ok, img = pcall(function()
 					return UiUtil.getHeadshot(m.userId)
@@ -160,7 +212,6 @@ function PartyPanel.create(parent: Instance, initialMembers: { PartyMember }?): 
 		end
 	end
 
-	-- default: solo
 	if initialMembers then
 		setMembers(initialMembers)
 	else
