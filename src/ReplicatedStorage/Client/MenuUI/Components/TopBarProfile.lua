@@ -1,0 +1,126 @@
+--!strict
+
+local Players = game:GetService("Players")
+
+local Theme = require(script.Parent.Parent:WaitForChild("Theme"))
+local UiUtil = require(script.Parent.Parent.Util:WaitForChild("UiUtil"))
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ProfileConstants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProfileConstants"))
+
+export type Api = {
+	setExp: (self: Api, level: number, exp: number, expToNext: number) -> (),
+	setAvatar: (self: Api, image: string) -> (),
+	getFrame: (self: Api) -> Frame,
+}
+
+local TopBarProfile = {}
+
+function TopBarProfile.create(parent: Instance, player: Player): Api
+	local frame = Instance.new("Frame")
+	frame.Name = "TopBarProfile"
+	frame.BackgroundTransparency = 0.2
+	frame.BorderSizePixel = 0
+	frame.Size = UDim2.fromOffset(340, 48)
+	frame.Parent = parent
+
+	UiUtil.createCorner(12).Parent = frame
+
+	local avatar = Instance.new("ImageLabel")
+	avatar.Name = "Avatar"
+	avatar.BackgroundTransparency = 1
+	avatar.Size = UDim2.fromOffset(40, 40)
+	avatar.Position = UDim2.fromOffset(6, 4)
+	avatar.Image = UiUtil.getHeadshot(player.UserId)
+	avatar.Parent = frame
+	UiUtil.createCorner(20).Parent = avatar
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "Name"
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3 = Color3.fromRGB(245, 245, 245)
+	nameLabel.Font = Theme.FontSemi
+	nameLabel.TextSize = 14
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Position = UDim2.fromOffset(54, 6)
+	nameLabel.Size = UDim2.new(1, -60, 0, 18)
+	nameLabel.Text = player.Name
+	nameLabel.Parent = frame
+
+	local levelLabel = Instance.new("TextLabel")
+	levelLabel.Name = "Level"
+	levelLabel.BackgroundTransparency = 1
+	levelLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
+	levelLabel.Font = Theme.Font
+	levelLabel.TextSize = 12
+	levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+	levelLabel.Position = UDim2.fromOffset(54, 24)
+	levelLabel.Size = UDim2.new(1, -60, 0, 16)
+	levelLabel.Text = "Lv. 1"
+	levelLabel.Parent = frame
+
+	local barBg = Instance.new("Frame")
+	barBg.Name = "ExpBarBg"
+	barBg.BackgroundTransparency = 0.35
+	barBg.BorderSizePixel = 0
+	barBg.Position = UDim2.fromOffset(54, 40)
+	barBg.Size = UDim2.new(1, -64, 0, 6)
+	barBg.Parent = frame
+	UiUtil.createCorner(6).Parent = barBg
+
+	local barFill = Instance.new("Frame")
+	barFill.Name = "ExpBarFill"
+	barFill.BackgroundTransparency = 0
+	barFill.BorderSizePixel = 0
+	barFill.Size = UDim2.new(0, 0, 1, 0)
+	barFill.Parent = barBg
+	UiUtil.createCorner(6).Parent = barFill
+
+	local function readAttrs()
+		local attrs = ProfileConstants.Attributes
+		local level = player:GetAttribute(attrs.Level)
+		local exp = player:GetAttribute(attrs.Exp)
+		local expToNext = player:GetAttribute(attrs.ExpToNext)
+
+		if typeof(level) ~= "number" then level = 1 end
+		if typeof(exp) ~= "number" then exp = 0 end
+		if typeof(expToNext) ~= "number" or expToNext <= 0 then expToNext = 100 end
+
+		return level :: number, exp :: number, expToNext :: number
+	end
+
+	local function apply(level: number, exp: number, expToNext: number)
+		levelLabel.Text = ("Lv. %d  •  %d/%d XP"):format(level, exp, expToNext)
+		local ratio = UiUtil.clamp01(exp / math.max(1, expToNext))
+		barFill.Size = UDim2.new(ratio, 0, 1, 0)
+	end
+
+	apply(readAttrs())
+
+	player:GetAttributeChangedSignal(ProfileConstants.Attributes.Level):Connect(function()
+		apply(readAttrs())
+	end)
+	player:GetAttributeChangedSignal(ProfileConstants.Attributes.Exp):Connect(function()
+		apply(readAttrs())
+	end)
+	player:GetAttributeChangedSignal(ProfileConstants.Attributes.ExpToNext):Connect(function()
+		apply(readAttrs())
+	end)
+
+	local api: Api = {} :: any
+	function api:setExp(level: number, exp: number, expToNext: number)
+		apply(level, exp, expToNext)
+	end
+
+	function api:setAvatar(image: string)
+		avatar.Image = image
+	end
+
+	function api:getFrame()
+		return frame
+	end
+
+	return api
+end
+
+return TopBarProfile
